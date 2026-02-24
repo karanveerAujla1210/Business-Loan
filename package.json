@@ -1,0 +1,124 @@
+{
+  "name": "tech_aviom_backend",
+  "version": "1.0.0",
+  "description": "Tech Aviom Projects Backend Server",
+  "homepage": "https://github.com/digitalcodersdev/tech_aviom_backend#readme",
+  "bugs": {
+    "url": "https://github.com/digitalcodersdev/tech_aviom_backend/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/digitalcodersdev/tech_aviom_backend.git"
+  },
+  "license": "ISC",
+  "author": "Mohit",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "jest --coverage --verbose",
+    "test:watch": "jest --watch",
+    "test:unit": "jest --testPathPattern=tests/unit",
+    "test:integration": "jest --testPathPattern=tests/integration",
+    "lint": "eslint src/**/*.js",
+    "lint:fix": "eslint src/**/*.js --fix",
+    "format": "prettier --write \"src/**/*.js\"",
+    "format:check": "prettier --check \"src/**/*.js\"",
+    "prepare": "husky install",
+    "migrate": "sequelize-cli db:migrate",
+    "migrate:undo": "sequelize-cli db:migrate:undo",
+    "seed": "sequelize-cli db:seed:all"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1692.0",
+    "axios": "^1.9.0",
+    "bs-logger": "^0.2.6",
+    "child_process": "^1.0.2",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "csurf": "^1.11.0",
+    "date-fns": "^4.1.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-fileupload": "^1.5.1",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "express-validator": "^7.2.1",
+    "fast-xml-parser": "^5.2.2",
+    "firebase-admin": "^13.3.0",
+    "form-data": "^4.0.2",
+    "fs": "^0.0.1-security",
+    "helmet": "^8.0.0",
+    "http": "^0.0.1-security",
+    "https": "^1.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mime-types": "^3.0.1",
+    "moment": "^2.30.1",
+    "mysql2": "^3.14.1",
+    "node-cron": "^4.1.1",
+    "nodemailer": "^7.0.2",
+    "nodemon": "^3.1.10",
+    "passport": "^0.7.0",
+    "passport-anonymous": "^1.0.1",
+    "passport-http-bearer": "^1.0.1",
+    "path": "^0.12.7",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1",
+    "puppeteer": "^24.9.0",
+    "qrcode-terminal": "^0.12.0",
+    "randomstring": "^1.3.1",
+    "razorpay": "^2.9.6",
+    "sequelize": "^6.37.7",
+    "sequelize-cli": "^6.6.2",
+    "sharp": "^0.34.1",
+    "socket.io": "^4.8.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "tedious": "^18.6.1",
+    "whatsapp-web.js": "^1.30.0",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-jest": "^28.10.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-security": "^3.0.1",
+    "globals": "^15.14.0",
+    "husky": "^9.1.7",
+    "jest": "^29.7.0",
+    "lint-staged": "^15.2.11",
+    "prettier": "^3.4.2",
+    "supertest": "^7.0.0"
+  },
+  "lint-staged": {
+    "src/**/*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/config/**",
+      "!src/migrations/**",
+      "!src/seeders/**"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 60,
+        "functions": 60,
+        "lines": 60,
+        "statements": 60
+      }
+    },
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
+  }
+}

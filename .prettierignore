@@ -1,0 +1,9 @@
+node_modules
+coverage
+logs
+public
+__MACOSX
+*.log
+package-lock.json
+.env
+.env.*
