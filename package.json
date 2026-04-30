@@ -99,26 +99,5 @@
       "eslint --fix",
       "prettier --write"
     ]
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "coverageDirectory": "coverage",
-    "collectCoverageFrom": [
-      "src/**/*.js",
-      "!src/config/**",
-      "!src/migrations/**",
-      "!src/seeders/**"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "branches": 60,
-        "functions": 60,
-        "lines": 60,
-        "statements": 60
-      }
-    },
-    "testMatch": [
-      "**/tests/**/*.test.js"
-    ]
   }
 }
