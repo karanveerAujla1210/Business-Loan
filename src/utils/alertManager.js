@@ -10,7 +10,7 @@ class AlertManager {
       memoryUsage: 80, // 80% memory usage
     };
     
-    this.transporter = process.env.EMAIL_HOST ? nodemailer.createTransporter({
+    this.transporter = process.env.EMAIL_HOST ? nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: process.env.EMAIL_PORT || 587,
       secure: false,

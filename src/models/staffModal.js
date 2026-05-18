@@ -111,6 +111,11 @@ const attributes = {
     allowNull: true,
     field: "roleAssigned",
   },
+  password: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: "password",
+  },
   isBlocked: {
     type: DataTypes.INTEGER,
     allowNull: true,

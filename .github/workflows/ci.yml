@@ -10,17 +10,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
-    strategy:
-      matrix:
-        node-version: [16.x, 18.x, 20.x]
-    
     steps:
       - uses: actions/checkout@v3
       
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js 20.x
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 20.x
           cache: 'npm'
       
       - name: Install dependencies
@@ -34,6 +30,22 @@ jobs:
       
       - name: Run tests
         run: npm test
+
+      - name: Enforce coverage regression guard
+        run: |
+          node -e "const fs=require('fs');const p='coverage/coverage-summary.json';if(!fs.existsSync(p)){console.error('coverage-summary.json not found');process.exit(1)};const c=JSON.parse(fs.readFileSync(p,'utf8')).total;const min={lines:60,statements:60,functions:60,branches:60};for(const k of Object.keys(min)){if(c[k].pct<min[k]){console.error(k+' coverage below threshold: '+c[k].pct);process.exit(1)}}console.log('Coverage thresholds satisfied')"
+
+      - name: Start API for smoke test
+        run: |
+          npm run dev > app.log 2>&1 &
+          sleep 10
+
+      - name: Run smoke test
+        run: npm run test:smoke
+
+      - name: Stop API after smoke test
+        if: always()
+        run: pkill -f "node index.js" || true
       
       - name: Upload coverage
         uses: codecov/codecov-action@v3

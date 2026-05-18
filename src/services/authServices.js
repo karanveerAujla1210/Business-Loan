@@ -1,4 +1,5 @@
 const { Op } = require("sequelize");
+const bcrypt = require("bcryptjs");
 const OtpHelper = require("../helpers/OtpHelper");
 const User = require("../models/user");
 const UserOtp = require("../models/user_otp");
@@ -14,6 +15,30 @@ const { logger } = require("../utils/logger");
 const { sendOtpDLT } = require("../utils/sendDltOtp");
 //ADDED 
 module.exports = {
+  /**
+   * Staff login with userId and password
+   */
+  staffLogin: async ({ userId, password }) => {
+    try {
+      const staff = await Employees.findOne({ where: { EmployeeID: userId } });
+      if (!staff) return MessageHelper.USER_NOT_REGISTERED;
+      if (staff.isBlocked == 1) return MessageHelper.USER_BLOCKED;
+      if (!staff.password) return "PASSWORD_NOT_SET";
+
+      const isMatch = await bcrypt.compare(password, staff.password);
+      if (!isMatch) return "INVALID_CREDENTIALS";
+
+      const payload = {
+        idUser: staff.EmployeeID,
+        phone: staff.mobileNumber,
+        roleAssigned: staff.roleAssigned,
+      };
+      return await createToken(payload);
+    } catch (error) {
+      logger.warn("ERROR staffLogin", error);
+      throw error;
+    }
+  },
   /**
    * This function used to login user
    * @author Mini Business Loan <mohitkumar.webdev@gmail.com>

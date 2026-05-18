@@ -2295,7 +2295,7 @@ const DigiLockerService = {
       return await Employees.findOne({
         where: {
           EmployeeID,
-          isBlocked: null,
+          [Op.or]: [{ isBlocked: null }, { isBlocked: 0 }],
         },
       });
     } catch (error) {

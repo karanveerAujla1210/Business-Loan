@@ -11,27 +11,28 @@ const RAZORPAY_SCHEMA = require("../validator/razorpaySchema");
 const HealthController = require("../controllers/HealthController");
 const MetricsController = require("../controllers/MetricsController");
 const ReportingController = require("../controllers/ReportingController");
+const ComplianceController = require("../controllers/ComplianceController");
+const CRMController = require("../controllers/CRMController");
 const { generatePrometheusMetrics } = require("../utils/prometheusMetrics");
+const { requireAuthenticatedUser, requireInternalUser } = require("../middlewares/authorization");
 //controllers
 const AuthController = require("../controllers/AuthController");
 const UserController = require("../controllers/UserController");
-const UtilityController = require("../controllers/UtilityController");
 const FAQController = require("../controllers/FAQController");
 const NotificationController = require("../controllers/NotificationController");
 const JobController = require("../controllers/JobController");
 const SourcingController = require("../controllers/SourcingController");
 
 const SanctionController = require("../controllers/SanctionController");
-const { disbursed } = require("../controllers/DisburseNewController");
 const collectionController = require("../controllers/collectionController");
 
 // Health check endpoint
 router.get("/health", HealthController.healthCheck);
 
 // Metrics endpoints
-router.get("/metrics", MetricsController.getMetrics);
-router.post("/metrics/reset", MetricsController.resetMetrics);
-router.get("/metrics/prometheus", (req, res) => {
+router.get("/metrics", requireInternalUser, MetricsController.getMetrics);
+router.post("/metrics/reset", requireInternalUser, MetricsController.resetMetrics);
+router.get("/metrics/prometheus", requireInternalUser, (req, res) => {
   res.set('Content-Type', 'text/plain');
   res.send(generatePrometheusMetrics());
 });
@@ -41,37 +42,40 @@ router.get("/reports/daily", ReportingController.getDailyReport);
 router.get("/reports/loans", ReportingController.getLoanStatistics);
 router.get("/reports/repayments", ReportingController.getRepaymentStatistics);
 router.get("/reports/customers", ReportingController.getCustomerStatistics);
+router.get("/crm/dashboard", CRMController.getDashboard);
 
 // Compliance endpoints
 router.get("/compliance/privacy-policy", ComplianceController.getPrivacyPolicy);
-router.get("/compliance/export-data", ComplianceController.exportUserData);
-router.post("/compliance/delete-data", ComplianceController.deleteUserData);
-router.post("/compliance/consent", ComplianceController.consentManagement);
+router.get("/compliance/export-data", requireAuthenticatedUser, ComplianceController.exportUserData);
+router.post("/compliance/delete-data", requireAuthenticatedUser, ComplianceController.deleteUserData);
+router.post("/compliance/consent", requireAuthenticatedUser, ComplianceController.consentManagement);
 
-//Auth controller API's
-router.post(
-  "/auth/generate-otp-customer",
-  checkSchema(API_SCHEMA.sendMobileOTP),
-  AuthController.sendOtpCustomer
-);
+//Auth controller API's - DEPRECATED - Use new API endpoints below
+// router.post(
+//   "/auth/generate-otp-customer",
+//   checkSchema(API_SCHEMA.sendMobileOTP),
+//   AuthController.sendOtpCustomer
+// );
 
-router.post(
-  "/auth/verify-otp-customer",
-  checkSchema(API_SCHEMA.verifyMobileOTPCustomer),
-  AuthController.verifyMobileOTPCustomer
-);
+// router.post(
+//   "/auth/verify-otp-customer",
+//   checkSchema(API_SCHEMA.verifyMobileOTPCustomer),
+//   AuthController.verifyMobileOTPCustomer
+// );
 
-router.post(
-  "/auth/verify-otp-staff",
-  checkSchema(API_SCHEMA.verifyMobileOTPCustomer),
-  AuthController.verifyMobileOTPStaff
-);
+// router.post(
+//   "/auth/verify-otp-staff",
+//   checkSchema(API_SCHEMA.verifyMobileOTPCustomer),
+//   AuthController.verifyMobileOTPStaff
+// );
 
-router.post(
-  "/auth/send-otp-staff",
-  checkSchema(API_SCHEMA.sendMobileOTPStaff),
-  AuthController.sendMobileOTPStaff
-);
+router.post("/auth/login-staff", AuthController.staffLogin);
+
+// router.post(
+//   "/auth/send-otp-staff",
+//   checkSchema(API_SCHEMA.sendMobileOTPStaff),
+//   AuthController.sendMobileOTPStaff
+// );
 
 // router.post(
 //   "/auth/verify-email",
@@ -217,6 +221,7 @@ router.post(
 router.get("/get/user/details", SourcingController.fetchCurrentUser);
 router.get("/get/user/details/web", SourcingController.fetchCurrentUserWeb);
 router.post("/get/cutomer/details", SourcingController.fetchCustomerUser);
+router.get("/sourcing/get-customer-documents", SourcingController.fetchCustomerDocuments);
 router.put(
   "/sourcing/update-applicant-additional-data",
   checkSchema(DIGILOCKER_SCHEMA.updateApplicantAdditionalData),
@@ -370,6 +375,91 @@ router.post(
   checkSchema(RAZORPAY_SCHEMA.createOrder),
   collectionController.createOrder
 );
+
+// <<<------------------------NEW SYSTEM API ROUTES------------------------------->>>
+
+// Import new controllers
+const authController = require("../controllers/authController");
+const camController = require("../controllers/camController");
+const loanController = require("../controllers/loanController");
+const repaymentController = require("../controllers/repaymentController");
+const applicantController = require("../controllers/applicantController");
+const adminController = require("../controllers/adminController");
+const { authenticateCustomer, authenticateStaff, authorize } = require("../middlewares/authMiddleware");
+
+// ============== AUTHENTICATION ROUTES ==============
+router.post("/api/v1/auth/send-otp", authController.sendOTP);
+router.post("/api/v1/auth/verify-otp", authController.verifyOTP);
+router.post("/api/v1/auth/customer/login", authController.customerLogin);
+router.post("/api/v1/auth/refresh-token", authController.refreshToken);
+router.post("/api/v1/auth/logout", authenticateCustomer, authController.logout);
+router.get("/api/v1/auth/profile", authenticateCustomer, authController.getCurrentProfile);
+router.get("/api/v1/auth/verify-token", authController.verifyToken);
+router.post("/api/v1/auth/resend-otp", authController.resendOTP);
+router.get("/api/v1/auth/check-phone/:phoneNumber", authController.checkPhoneAvailability);
+
+// ============== CAM (CREDIT ASSESSMENT) ROUTES ==============
+router.post("/api/v1/cam/create", authenticateStaff, authorize(['credit_officer', 'branch_manager', 'super_admin']), camController.createCAM);
+router.get("/api/v1/cam/:camID", authenticateStaff, camController.getCAMById);
+router.get("/api/v1/cam/customer/:customerID", authenticateCustomer, camController.getCAMByCustomer);
+router.put("/api/v1/cam/:camID", authenticateStaff, authorize(['credit_officer', 'branch_manager']), camController.updateCAM);
+router.post("/api/v1/cam/:camID/submit", authenticateStaff, camController.submitCAM);
+router.get("/api/v1/cam/:camID/decision", authenticateStaff, camController.getApprovalDecision);
+router.post("/api/v1/cam/:camID/approve", authenticateStaff, authorize(['credit_officer', 'branch_manager', 'super_admin']), camController.approveCAM);
+router.post("/api/v1/cam/:camID/reject", authenticateStaff, authorize(['credit_officer', 'branch_manager', 'super_admin']), camController.rejectCAM);
+router.get("/api/v1/cam/list", authenticateStaff, camController.getCAMList);
+router.post("/api/v1/cam/calculate-emi", camController.calculateEMI);
+router.post("/api/v1/cam/calculate-ltv", camController.calculateLTV);
+
+// ============== LOAN ROUTES ==============
+router.post("/api/v1/loans/create", authenticateCustomer, loanController.createLoan);
+router.get("/api/v1/loans/:loanID", authenticateCustomer, loanController.getLoanById);
+router.get("/api/v1/loans/customer/:customerID", authenticateCustomer, loanController.getCustomerLoans);
+router.get("/api/v1/loans", authenticateStaff, authorize(['credit_officer', 'branch_manager', 'super_admin']), loanController.listLoans);
+router.post("/api/v1/loans/:loanID/approve", authenticateStaff, authorize(['credit_officer', 'branch_manager', 'super_admin']), loanController.approveLoan);
+router.post("/api/v1/loans/:loanID/reject", authenticateStaff, authorize(['credit_officer', 'branch_manager', 'super_admin']), loanController.rejectLoan);
+router.get("/api/v1/loans/:loanID/status", authenticateCustomer, loanController.getLoanStatus);
+router.get("/api/v1/loans/:loanID/emi-schedule", authenticateCustomer, loanController.getEMISchedule);
+router.get("/api/v1/loans/:loanID/details", authenticateCustomer, loanController.getLoanDetails);
+router.post("/api/v1/loans/:loanID/mark-overdue", authenticateStaff, authorize(['collection_agent', 'branch_manager', 'super_admin']), loanController.markLoanOverdue);
+router.post("/api/v1/loans/:loanID/mark-npa", authenticateStaff, authorize(['branch_manager', 'super_admin']), loanController.markLoanNPA);
+router.post("/api/v1/loans/:loanID/update-emi", authenticateStaff, authorize(['branch_manager', 'super_admin']), loanController.updateLoanEMI);
+
+// ============== PAYMENT/REPAYMENT ROUTES ==============
+router.post("/api/v1/payments/process", authenticateCustomer, repaymentController.processPayment);
+router.get("/api/v1/payments/loan/:loanID/history", authenticateCustomer, repaymentController.getPaymentHistory);
+router.get("/api/v1/payments/customer/:customerID/history", authenticateCustomer, repaymentController.getCustomerPaymentHistory);
+router.get("/api/v1/payments/loan/:loanID/total-paid", authenticateCustomer, repaymentController.getTotalPaid);
+router.get("/api/v1/payments/loan/:loanID/outstanding-emis", authenticateCustomer, repaymentController.getOutstandingEMIs);
+router.get("/api/v1/payments/agent/:agentID/statistics", authenticateStaff, authorize(['collection_agent', 'branch_manager', 'super_admin']), repaymentController.getAgentStatistics);
+router.get("/api/v1/payments/overdue-loans", authenticateStaff, authorize(['collection_agent', 'branch_manager', 'super_admin']), repaymentController.getOverdueLoans);
+router.get("/api/v1/payments/receipt/:transactionID", authenticateCustomer, repaymentController.getPaymentReceipt);
+router.post("/api/v1/payments/create-link", authenticateCustomer, repaymentController.createPaymentLink);
+router.get("/api/v1/payments/loan/:loanID/status", authenticateCustomer, repaymentController.getLoanPaymentStatus);
+router.get("/api/v1/payments/collection/dashboard", authenticateStaff, authorize(['collection_agent', 'branch_manager', 'super_admin']), repaymentController.getCollectionDashboard);
+
+// ============== APPLICANT/CUSTOMER ROUTES ==============
+router.post("/api/v1/applicant/profile", authenticateCustomer, applicantController.updateProfile);
+router.get("/api/v1/applicant/profile/:customerID", authenticateCustomer, applicantController.getProfile);
+router.get("/api/v1/applicant/sensitive/:customerID", authenticateCustomer, applicantController.getSensitiveInfo);
+router.post("/api/v1/applicant/kyc/update", authenticateStaff, authorize(['credit_officer', 'branch_manager', 'super_admin']), applicantController.updateKYCStatus);
+router.post("/api/v1/applicant/documents/upload", authenticateCustomer, applicantController.uploadDocument);
+router.get("/api/v1/applicant/documents/:customerID", authenticateCustomer, applicantController.getDocuments);
+router.post("/api/v1/applicant/co-applicant/add", authenticateCustomer, applicantController.addCoApplicant);
+router.get("/api/v1/applicant/co-applicants/:customerID", authenticateCustomer, applicantController.getCoApplicants);
+router.get("/api/v1/applicant/list", authenticateStaff, authorize(['branch_manager', 'super_admin']), applicantController.listApplicants);
+router.get("/api/v1/applicant/summary/:customerID", authenticateCustomer, applicantController.getSummary);
+
+// ============== ADMIN & REPORTING ROUTES ==============
+router.get("/api/v1/admin/dashboard", authenticateStaff, authorize(['branch_manager', 'super_admin']), adminController.getDashboard);
+router.get("/api/v1/admin/reports/loans", authenticateStaff, authorize(['branch_manager', 'super_admin']), adminController.getLoanReport);
+router.get("/api/v1/admin/reports/customers", authenticateStaff, authorize(['branch_manager', 'super_admin']), adminController.getCustomerReport);
+router.get("/api/v1/admin/reports/collection", authenticateStaff, authorize(['branch_manager', 'super_admin']), adminController.getCollectionReport);
+router.get("/api/v1/admin/reports/npa-analysis", authenticateStaff, authorize(['branch_manager', 'super_admin']), adminController.getNPAAnalysis);
+router.get("/api/v1/admin/reports/credit-quality", authenticateStaff, authorize(['branch_manager', 'super_admin']), adminController.getCreditQualityReport);
+router.get("/api/v1/admin/reports/monthly", authenticateStaff, authorize(['branch_manager', 'super_admin']), adminController.getMonthlyReport);
+router.get("/api/v1/admin/export/loans", authenticateStaff, authorize(['branch_manager', 'super_admin']), adminController.exportLoansData);
+router.get("/api/v1/admin/system-health", authenticateStaff, authorize(['super_admin']), adminController.getSystemHealth);
 
 module.exports = router;
 

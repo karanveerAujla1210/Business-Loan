@@ -2,9 +2,12 @@ const dataRetentionManager = require('../utils/dataRetentionManager');
 const dataPrivacy = require('../middlewares/dataPrivacy');
 const { logger } = require('../utils/logger');
 const { catchAsync } = require('../middlewares/errorHandler');
+const auditTrail = require('../utils/auditTrail');
+const { AppError } = require('../middlewares/errorHandler');
+const consentService = require('../services/consentService');
 
 const exportUserData = catchAsync(async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.authUserId;
 
   const userData = await dataRetentionManager.exportUserData(userId);
 
@@ -19,7 +22,7 @@ const exportUserData = catchAsync(async (req, res) => {
 });
 
 const deleteUserData = catchAsync(async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.authUserId;
 
   await dataRetentionManager.deleteUserData(userId);
 
@@ -32,7 +35,7 @@ const deleteUserData = catchAsync(async (req, res) => {
   });
 });
 
-const getPrivacyPolicy = catchAsync(async (req, res) => {
+const getPrivacyPolicy = catchAsync((req, res) => {
   res.json({
     status: true,
     data: {
@@ -69,9 +72,38 @@ const getPrivacyPolicy = catchAsync(async (req, res) => {
 
 const consentManagement = catchAsync(async (req, res) => {
   const { consentType, granted } = req.body;
-  const userId = req.user.id;
+  const userId = req.authUserId;
 
-  logger.info('Consent updated', { userId, consentType, granted });
+  if (typeof consentType !== 'string' || consentType.trim().length === 0) {
+    throw new AppError('consentType is required', 400);
+  }
+
+  if (typeof granted !== 'boolean') {
+    throw new AppError('granted must be boolean', 400);
+  }
+
+  const normalizedConsentType = consentType.trim();
+  await consentService.saveUserConsent({
+    userId,
+    consentType: normalizedConsentType,
+    granted,
+  });
+
+  await auditTrail.log({
+    userId,
+    action: 'CONSENT_UPDATED',
+    entityType: 'consent',
+    entityId: userId,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+    newValues: {
+      consentType: normalizedConsentType,
+      granted,
+      updatedAt: new Date().toISOString(),
+    },
+  });
+
+  logger.info('Consent updated', { userId, consentType: normalizedConsentType, granted });
 
   res.json({
     status: true,

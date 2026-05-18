@@ -50,10 +50,17 @@ const attributes = {
   maskedAadharNumber: {
     type: DataTypes.STRING(15),
     allowNull: true,
+    comment: 'Masked Aadhaar (XXXX-XXXX-1234 format)',
+  },
+  aadharNumberEncrypted: {
+    type: DataTypes.BLOB('long'),
+    allowNull: true,
+    comment: 'Encrypted Aadhaar number (AES-256-CBC)',
   },
   AadharNumber: {
     type: DataTypes.STRING(15),
     allowNull: true,
+    comment: 'DEPRECATED: Use aadharNumberEncrypted instead',
   },
   combinedAddress: {
     type: DataTypes.TEXT,
@@ -110,16 +117,60 @@ const attributes = {
   isBlocked: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    defaultValue: null,
+    defaultValue: 0,
+    comment: '1 if customer is blocked (fraud/default)',
+  },
+  isEsignCompleted: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    comment: 'Whether eSign has been completed',
+  },
+  esignDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Date when eSign was completed',
   },
   loanApplicationStatus: {
     type: DataTypes.INTEGER,
     allowNull: true,
     defaultValue: 0,
+    comment: '0=pending, 1=approved, 2=rejected, 3=under_review',
+  },
+  approvalDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Date when loan was approved',
+  },
+  approvedBy: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: 'ID of approving authority',
+  },
+  rejectedDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Date when application was rejected',
+  },
+  rejectedBy: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: 'ID of rejecting authority',
   },
   panNumber: {
     type: DataTypes.STRING,
     allowNull: true,
+    comment: 'PAN number (can be encrypted like Aadhaar)',
+  },
+  maskedPANNumber: {
+    type: DataTypes.STRING(10),
+    allowNull: true,
+    comment: 'Masked PAN (ABCD****F format)',
+  },
+  panNumberEncrypted: {
+    type: DataTypes.BLOB('long'),
+    allowNull: true,
+    comment: 'Encrypted PAN number (AES-256-CBC)',
   },
   pendingReason: {
     type: DataTypes.STRING,
@@ -128,9 +179,21 @@ const attributes = {
   },
 
   // Added fields
+  name: {
+    type: DataTypes.STRING(200),
+    allowNull: true,
+    comment: 'Full name (consolidated)',
+  },
+  dependents: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0,
+    comment: 'Number of dependents',
+  },
   maritalStatus: {
     type: DataTypes.STRING(50),
     allowNull: true,
+    comment: 'Single, Married, Divorced, Widowed',
   },
   appliedMode: {
     type: DataTypes.STRING(100),

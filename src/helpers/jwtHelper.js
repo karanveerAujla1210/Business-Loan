@@ -3,25 +3,25 @@
  * @author Mini Business Loan <mohitkumar.webdev@gmail.com>
  */
 const fs = require("fs");
+const path = require("path");
 const jwt = require("jsonwebtoken");
-const privateKEY = fs.readFileSync("./private.key", "utf8");
-const publicKEY = fs.readFileSync("./public.key", "utf8");
-const issuer = "Tech Aviom"; // Issuer
-const subject = "info@kindajobs.com"; // Subject
-const audience = "http://kindajobs.in"; // Audience
+const privateKEY = fs.readFileSync(path.join(__dirname, "../../private.key"), "utf8");
+const publicKEY = fs.readFileSync(path.join(__dirname, "../../public.key"), "utf8");
+const issuer = process.env.JWT_ISSUER || "MiniBusiness Loan";
+const subject = process.env.JWT_SUBJECT || "info@minibusinessloan.com";
+const audience = process.env.JWT_AUDIENCE || "https://minibusinessloan.com";
 const signOptions = {
-  issuer: issuer,
-  subject: subject,
-  audience: audience,
+  issuer,
+  subject,
+  audience,
   expiresIn: "1y",
   algorithm: "RS256",
 };
 const verifyOptions = {
-  issuer: issuer,
-  subject: subject,
-  audience: audience,
-  expiresIn: "1y",
-  algorithm: ["RS256"],
+  issuer,
+  subject,
+  audience,
+  algorithms: ["RS256"],
 };
 
 module.exports = {

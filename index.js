@@ -89,6 +89,9 @@ app.post(
 
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5174",
   "https://minibuisnessloan.com",
   "https://minibusinessloan.com",
   "https://www.minibusinessloan.com",
@@ -140,10 +143,12 @@ app.use(fileUpload());
 
 var corsOption = {
   origin: [
+    "/health",
     "/auth/verify-otp-customer",
     "/auth/generate-otp-customer",
     "/auth/send-otp-staff",
     "/auth/verify-otp-staff",
+    "/auth/login-staff",
     "/auth/register",
     "/auth/verify-mobile",
     "/sourcing/process-bank-statement",
@@ -171,10 +176,12 @@ app.use(
   (req, res, next) => {
     if (
       [
+        "/health",
         "/auth/verify-otp-customer",
         "/auth/generate-otp-customer",
         "/auth/send-otp-staff",
         "/auth/verify-otp-staff",
+        "/auth/login-staff",
         "/auth/register",
         "/auth/verify-mobile",
         "/sourcing/process-bank-statement",

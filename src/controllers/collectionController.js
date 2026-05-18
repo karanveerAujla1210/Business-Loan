@@ -75,7 +75,7 @@ module.exports = {
   // 🔁 Keep other controller methods as-is
   getBranchCollectionData: async (request, response) => {
     const params = { ...resParams };
-    const { EmployeeID } = request?.user;
+    const { EmployeeID, postingBranch } = request?.user;
     const err = await errorHelper.checkError(request);
     if (err) {
       params.message = err;
@@ -83,7 +83,10 @@ module.exports = {
     }
 
     try {
-      params.data = await collectionServices.getBranchCollData({ EmployeeID });
+      params.data = await collectionServices.getBranchCollData({
+        EmployeeID,
+        postingBranch,
+      });
 
       if (params.data) {
         params.message = MessageHelper.SUCCESS;

@@ -1,4 +1,4 @@
-const { logger } = require("bs-logger");
+const { logger } = require("../utils/logger");
 const axios = require("axios");
 const qs = require("qs");
 const SMS_DETAILS = require("../models/checkSmsDetails");

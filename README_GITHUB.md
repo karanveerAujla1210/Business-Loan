@@ -122,6 +122,8 @@ Create `.env` file:
 
 ```env
 # Database
+# Use localhost for local host-based development.
+# If the backend runs inside docker-compose, use `DB_HOST=db`.
 DB_HOST=localhost
 DB_PORT=1433
 DB_NAME=MiniBusiness_Loan_CRM

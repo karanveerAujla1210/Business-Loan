@@ -22,7 +22,9 @@ const authLimiter = rateLimit({
     status: false,
     message: 'Too many authentication attempts, please try again after 15 minutes.',
     api_version: '1.0'
-  }
+  },
+  standardHeaders: true,
+  legacyHeaders: true,
 });
 
 // OTP limiter
@@ -33,7 +35,9 @@ const otpLimiter = rateLimit({
     status: false,
     message: 'Too many OTP requests, please try again after 1 hour.',
     api_version: '1.0'
-  }
+  },
+  standardHeaders: true,
+  legacyHeaders: true,
 });
 
 // File upload limiter
@@ -44,7 +48,9 @@ const uploadLimiter = rateLimit({
     status: false,
     message: 'Too many file uploads, please try again later.',
     api_version: '1.0'
-  }
+  },
+  standardHeaders: true,
+  legacyHeaders: true,
 });
 
 module.exports = {

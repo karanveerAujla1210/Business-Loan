@@ -14,30 +14,60 @@ const socket = require("../config/socket");
 const processedEvents = new Set();
 
 module.exports = {
-  getBranchCollData: async ({ EmployeeID }) => {
+  getBranchCollData: async ({ EmployeeID, postingBranch = null }) => {
     try {
       const results = await SEQUELIZE.query(
         `
-          SELECT BM.branchName, CONCAT(AP.firstName,' ',AP.middleName,' ',AP.lastName) AS name,
-          RS.CustomerID, AP.phoneNumber, InstallmentNumber, DueDate, Principal, Interest,
-          RS.EMI, Principle_Coll, Interest_Coll, CollectionAmt, Collection_Date, StaffID,
-          ABD.businessAddress
+          SELECT TOP 25
+          BM.branchName,
+          LTRIM(RTRIM(CONCAT(ISNULL(AP.firstName, ''),' ',ISNULL(AP.middleName, ''),' ',ISNULL(AP.lastName, '')))) AS name,
+          RS.CustomerID,
+          LP.loanID,
+          AP.customerID AS applicantCustomerID,
+          AP.phoneNumber,
+          RS.InstallmentNumber,
+          CAST(RS.DueDate AS DATE) AS DueDate,
+          RS.Principal,
+          RS.Interest,
+          RS.EMI,
+          RS.Principle_Coll,
+          RS.Interest_Coll,
+          RS.CollectionAmt,
+          RS.Collection_Date,
+          RS.StaffID,
+          ABD.businessAddress,
+          CASE
+            WHEN CAST(RS.DueDate AS DATE) < CAST(GETDATE() AS DATE) THEN 'Overdue'
+            WHEN CAST(RS.DueDate AS DATE) = CAST(GETDATE() AS DATE) THEN 'Due Today'
+            ELSE 'Upcoming'
+          END AS collectionBucket
           FROM RepaymentSchedule RS
           INNER JOIN LoanProposal LP ON RS.CustomerID = LP.LoanID
           INNER JOIN Applicant AP ON LP.customerID = AP.customerID
-          INNER JOIN branchMaster BM ON AP.branchID = BM.branchID
-          INNER JOIN applicantBusinessDetails ABD ON AP.customerID = ABD.customerID
-          WHERE DueDate = '2025-06-27'
-          AND LP.disbursementDate IS NOT NULL
-          AND LP.SETTLEMENTDATE IS NULL
+          INNER JOIN BranchMaster BM ON AP.branchID = BM.branchID
+          LEFT JOIN applicantBusinessDetails ABD ON AP.customerID = ABD.customerID
+          WHERE LP.disbursementDate IS NOT NULL
+          AND LP.SettlementDate IS NULL
+          AND AP.isLeadRejected = 0
+          AND (:postingBranch IS NULL OR AP.branchID = :postingBranch)
+          AND (
+            RS.Collection_Date IS NULL
+            OR ISNULL(RS.CollectionAmt, 0) < ISNULL(RS.EMI, 0)
+          )
+          ORDER BY
+          CASE
+            WHEN CAST(RS.DueDate AS DATE) < CAST(GETDATE() AS DATE) THEN 0
+            WHEN CAST(RS.DueDate AS DATE) = CAST(GETDATE() AS DATE) THEN 1
+            ELSE 2
+          END,
+          CAST(RS.DueDate AS DATE) ASC,
+          RS.InstallmentNumber ASC
         `,
         {
-          replacements: { EmployeeID },
+          replacements: { EmployeeID, postingBranch },
           type: QueryTypes.SELECT,
         }
       );
-
-      //'2025-06-27'  '${moment(new Date()).format("YYYY-MM-DD")}'
 
       return results;
     } catch (error) {

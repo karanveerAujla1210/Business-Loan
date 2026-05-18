@@ -1,53 +1,192 @@
-import fs from "fs";
-import crypto from "crypto";
-import axios from "axios";
-import { exec as execCb } from "child_process";
-import { promisify } from "util";
-import path from "path";
-import dotenv from "dotenv";
-import asyncHandler from "../../utils/asyncHandler.js";
-import { logger } from "../utils/logger.js";
+/**
+ * Disbursal Service
+ * Handles loan disbursement and banking integration
+ * @author MiniBusiness Loan
+ */
 
-let count = 2000;
-dotenv.config();
-const exec = promisify(execCb);
-const errorMap = {
-  501: "Internal exception. Please do status check after sometime",
-  401: "Unauthorized. Check the API Key",
-  429: "Too Many Requests. Maintain the TPS defined",
-  403: "Forbidden. Check the IP address & API Key",
-  997: "Bad request or internal exception. Check request packet and do status check",
-  8010: "INTERNAL_SERVICE_FAILURE. Contact ICICI Tech team",
-  8011: "Host Not Found. Contact ICICI Tech team",
-  8012: "BACKEND_CONNECTION_TIMEOUT. Contact ICICI Tech team",
-  8013: "BACKEND_READ_TIMEOUT. Contact ICICI Tech team",
-  8014: "Bad URL. Contact ICICI Tech team",
-  8015: "Invalid decrypted request. Contact ICICI Tech team",
-  8016: "Request Decryption Failure. Check encryption and certificate",
-  8017: "Request Schema Validation Failure. Contact ICICI Tech team",
-  8018: "Response Schema Validation Failure. Contact ICICI Tech team",
-  8019: "Response Encryption Failure. Contact ICICI Tech team",
-  8099: "Blank Response from Backend. Do status check",
-  8123: "Configured amount limit exceeded",
-  8096: "Invalid request. Request failed",
-};
+const LoanProposal = require('../models/LoanProposal');
+const Applicant = require('../models/applicant');
+const { logger } = require('../utils/logger');
+const { Op } = require('sequelize');
 
-// Utility to generate timestamp
-export const getCurrentTimestamp = () => {
-  const now = new Date();
-  const [yyyy, mm, dd, hh, min, ss] = [
-    now.getFullYear(),
-    now.getMonth() + 1,
-    now.getDate(),
-    now.getHours(),
-    now.getMinutes(),
-    now.getSeconds(),
-  ].map((n) => n.toString().padStart(2, "0"));
+class DisbursalService {
+  /**
+   * Initiate disbursement
+   */
+  async initiateDisbursement(disburseData) {
+    try {
+      const {
+        loanID,
+        customerID,
+        disbursalAmount,
+        bankAccountID,
+        bankName,
+        accountNumber,
+      } = disburseData;
 
-  return `${yyyy}${mm}${dd}${hh}${min}${ss}`;
-};
-const generateRandom16Digit = () => {
-  return crypto.randomBytes(8).toString("hex").slice(0, 16);
+      // Get loan
+      const loan = await LoanProposal.findOne({ where: { loanID } });
+      if (!loan) {
+        throw new Error('Loan not found');
+      }
+
+      if (loan.status !== 'approved') {
+        throw new Error('Loan must be in approved status');
+      }
+
+      // Get applicant
+      const applicant = await Applicant.findOne({ where: { customerID } });
+      if (!applicant) {
+        throw new Error('Applicant not found');
+      }
+
+      // Validate disbursement amount
+      if (disbursalAmount > loan.amountApplied) {
+        throw new Error('Disbursal amount cannot exceed applied loan amount');
+      }
+
+      // Calculate net disbursement (after processing fee)
+      const processingFee = loan.processingFee || 0;
+      const netDisbursement = disbursalAmount - processingFee;
+
+      // Create UTR (Unique Transaction Reference)
+      const utr = `UTR-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+      // Update loan
+      await LoanProposal.update(
+        {
+          status: 'disbursed',
+          loanApplicationStatus: 1,
+          disbursementDate: new Date(),
+          NetDisbursement: netDisbursement,
+          outstandingBalance: disbursalAmount,
+          firstDateofInstallment: this.calculateFirstEMIDate(new Date()),
+          nextEMIDate: this.calculateFirstEMIDate(new Date()),
+          lastDateofInstallment: this.calculateLastEMIDate(new Date(), loan.tenure),
+        },
+        { where: { loanID } }
+      );
+
+      logger.info('Disbursal initiated', { loanID, utr, netDisbursement });
+
+      // TODO: Call banking API to transfer funds
+
+      return {
+        loanID,
+        utr,
+        disbursalAmount,
+        processingFee,
+        netDisbursement,
+        status: 'initiated',
+        message: 'Disbursal initiated successfully. Please wait for fund transfer.',
+      };
+    } catch (error) {
+      logger.error('Failed to initiate disbursement', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Confirm disbursement
+   */
+  async confirmDisbursement(loanID, utr, bankReference) {
+    try {
+      const loan = await LoanProposal.findOne({ where: { loanID } });
+      if (!loan) {
+        throw new Error('Loan not found');
+      }
+
+      await LoanProposal.update(
+        {
+          status: 'active',
+          disbursementConfirmedDate: new Date(),
+          bankReferenceNumber: bankReference,
+        },
+        { where: { loanID } }
+      );
+
+      logger.info('Disbursement confirmed', { loanID, utr, bankReference });
+      return { status: 'confirmed', message: 'Loan disbursed successfully' };
+    } catch (error) {
+      logger.error('Failed to confirm disbursement', { loanID, error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Get disbursement status
+   */
+  async getDisbursementStatus(loanID) {
+    try {
+      const loan = await LoanProposal.findOne({ where: { loanID } });
+      if (!loan) {
+        throw new Error('Loan not found');
+      }
+
+      return {
+        loanID,
+        status: loan.status,
+        disbursementDate: loan.disbursementDate,
+        disbursementAmount: loan.amountApplied,
+        processingFee: loan.processingFee,
+        netDisbursement: loan.NetDisbursement,
+        bankReference: loan.bankReferenceNumber,
+      };
+    } catch (error) {
+      logger.error('Failed to get disbursement status', { loanID, error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate first EMI date
+   */
+  calculateFirstEMIDate(disbursementDate) {
+    const date = new Date(disbursementDate);
+    date.setDate(date.getDate() + 30); // 30 days grace period
+    return date;
+  }
+
+  /**
+   * Calculate last EMI date
+   */
+  calculateLastEMIDate(startDate, tenureMonths) {
+    const date = new Date(startDate);
+    date.setMonth(date.getMonth() + tenureMonths);
+    return date;
+  }
+
+  /**
+   * Validate disbursement eligibility
+   */
+  async validateDisbursementEligibility(loanID) {
+    try {
+      const loan = await LoanProposal.findOne({ where: { loanID } });
+      if (!loan) {
+        throw new Error('Loan not found');
+      }
+
+      const validations = {
+        isApproved: loan.status === 'approved',
+        hasEsign: loan.isEsignCompleted === true,
+        noBlockages: true,
+      };
+
+      const canDisburse = Object.values(validations).every((v) => v === true);
+
+      return {
+        canDisburse,
+        validations,
+        message: canDisburse ? 'Eligible for disbursement' : 'Not eligible for disbursement',
+      };
+    } catch (error) {
+      logger.error('Failed to validate disbursal eligibility', { loanID, error: error.message });
+      throw error;
+    }
+  }
+}
+
+module.exports = new DisbursalService();
 };
 
 // Main function

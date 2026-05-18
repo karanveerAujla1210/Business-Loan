@@ -47,15 +47,14 @@ module.exports = {
     // return ;
   },
   generateOtp: async (emailId) => {
-    // const OTP = Math.floor(Math.random() * (max - min + 1) + min);
-    const OTP = "000000";
+    const OTP = Math.floor(100000 + Math.random() * 900000).toString();
     let mailDetails = {
       from: process.env.FROM,
       to: emailId,
       subject: "Verify OTP",
-      text: `Please verify your email by clicking the link below:\n\n${url}`,
+      text: `Your OTP is: ${OTP}. Do not share this with anyone.`,
     };
-    // let mail = await sendEmail(mailDetails);
+    await sendEmail(mailDetails);
     return OTP;
   },
 

@@ -1,6 +1,17 @@
-# MiniBusiness Loan CRM - Project Status
+# MiniBusiness Loan CRM - Project Status (Authoritative)
 
-## 🎉 PHASES 1 & 2 COMPLETE
+## Live Status
+
+This is the single source of truth for delivery status.
+`PROJECT_COMPLETE.md` is an archived summary and should not be used for current tracking.
+
+## Current Phase Completion
+- Phase 1: Complete
+- Phase 2: Complete
+- Phase 3: In progress (infra hardening in progress)
+- Phase 4: In progress (CI gates and smoke/load checks added)
+- Phase 5: In progress (E2E verification and contract validation)
+- Phase 6: In progress (runbook + staging sign-off checklist added)
 
 ---
 

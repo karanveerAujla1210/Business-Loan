@@ -1,6 +1,17 @@
 const reportingService = require('../services/reportingService');
-const { logger } = require('../utils/logger');
 const { catchAsync } = require('../middlewares/errorHandler');
+const { AppError } = require('../middlewares/errorHandler');
+
+const parseDate = (value, fieldName) => {
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new AppError(`Invalid ${fieldName}`, 400);
+  }
+  return parsed;
+};
 
 const getDailyReport = catchAsync(async (req, res) => {
   const { date } = req.query;
@@ -17,10 +28,12 @@ const getDailyReport = catchAsync(async (req, res) => {
 
 const getLoanStatistics = catchAsync(async (req, res) => {
   const { startDate, endDate } = req.query;
-  
+  const parsedStart = parseDate(startDate, 'startDate');
+  const parsedEnd = parseDate(endDate, 'endDate');
+
   const stats = await reportingService.getLoanStatistics(
-    startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-    endDate || new Date()
+    parsedStart || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+    parsedEnd || new Date()
   );
 
   res.json({
@@ -32,10 +45,12 @@ const getLoanStatistics = catchAsync(async (req, res) => {
 
 const getRepaymentStatistics = catchAsync(async (req, res) => {
   const { startDate, endDate } = req.query;
-  
+  const parsedStart = parseDate(startDate, 'startDate');
+  const parsedEnd = parseDate(endDate, 'endDate');
+
   const stats = await reportingService.getRepaymentStatistics(
-    startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-    endDate || new Date()
+    parsedStart || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+    parsedEnd || new Date()
   );
 
   res.json({

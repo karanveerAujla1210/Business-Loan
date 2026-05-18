@@ -39,7 +39,7 @@ function initPassport() {
       }
     })
   );
-  console.log("ID 4");
+  console.log("Passport strategies initialized.");
   passport.authenticationMiddleware = authenticationMiddleware;
 }
 

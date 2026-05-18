@@ -4,12 +4,15 @@
  */
 function authenticationMiddleware() {
     return function (req, res, next) {
-        console.log("req.isAuthenticated()",req.isAuthenticated())
         if (req.isAuthenticated()) {
-            return next()
+            return next();
         }
-        res.redirect('/')
-    }
+        return res.status(401).json({
+            status: false,
+            message: "Not Authorized",
+            api_version: "1.0",
+        });
+    };
 }
 
 module.exports = authenticationMiddleware

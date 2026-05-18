@@ -12,6 +12,7 @@ const OtpHelper = require("../helpers/OtpHelper");
 const digilockerServices = require("../services/digilockerServices");
 const { uploadFileToS3 } = require("../utils/uploadFilesS3");
 const bankServices = require("../services/bankServices");
+const UserDocument = require("../models/userDocument");
 const UserBSALog = require("../models/userBSALog");
 const DigilockerRequestModel = require("../models/digilockerRequests");
 const { default: axios } = require("axios");
@@ -96,6 +97,37 @@ module.exports = {
         console.log(error);
         response.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(params);
       }
+    }
+  },
+  fetchCustomerDocuments: async (request, response) => {
+    const params = { ...resParams };
+    const customerID = request.query.customerID || request.query.customerId;
+    const err = await errorHelper.checkError(request);
+
+    if (err) {
+      params.status = false;
+      params.message = err;
+      response.status(HTTP_STATUS.NOT_ACCEPTED).send(params);
+      return;
+    }
+
+    if (!customerID) {
+      params.status = false;
+      params.message = "Missing customerID query parameter.";
+      response.status(HTTP_STATUS.BAD_REQUEST).send(params);
+      return;
+    }
+
+    try {
+      const documentRecord = await UserDocument.findOne({ where: { customerID } });
+      params.data = documentRecord || {};
+      params.message = documentRecord ? MessageHelper.SUCCESS : "No documents found for this customer.";
+      response.status(HTTP_STATUS.OK).send(params);
+    } catch (error) {
+      params.data = error;
+      params.message = error.message;
+      console.log(error);
+      response.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(params);
     }
   },
   sendOTP: async (request, response) => {
